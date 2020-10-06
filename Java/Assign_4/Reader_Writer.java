@@ -6,9 +6,12 @@ class Data{
         this.d=d;
     }
     synchronized int read(){
+        System.out.println("read");
         return d;
     }
     synchronized void write(int k){
+
+        System.out.println("Wrote");
         d=k;
     }
 }
@@ -19,40 +22,41 @@ class OPSAllowed{
         writeC=0;
     }
     int SyncRead(Data dat){
-        System.out.println("Reading");
         synchronized(this){
-        while(writeC!=0)
+            while(writeC!=0){
             try{
                 wait();
-            }catch(Exception e){}
-            readC++;
+            }catch(Exception e){} 
         }
+        readC++;
+        }
+        System.out.println("Reading ");
         int r = dat.read();
         System.out.println("Read value: "+r);
+        System.out.println("Read Complete");
         synchronized(this){
             readC--;
             notifyAll();
         }
-        System.out.println("Read Complete");
-        return r;
+        return 0;
     }
     void SyncWrite(Data d,int k){
-        System.out.println("Writing");
         synchronized(this){
-        while(writeC!=0 && readC!=0){
-            try{
-                wait();
+            while(writeC!=0 || readC!=0){
+                try{
+                    wait();
+                }
+                catch(Exception e){}
             }
-            catch(Exception e){}
-        }
             writeC++;
         }
+        System.out.println("Writing");
         d.write(k);
+        System.out.println("Writing Done");
         synchronized(this){
             writeC--;
             notifyAll();
         }
-        System.out.println("Writing Done");
     }
 
 }
@@ -85,9 +89,15 @@ public class Reader_Writer {
         OPSAllowed op = new OPSAllowed();
         Thread r = new Thread(new Reader(d,op));
         Thread w = new Thread(new Writer(d, op));
-
+        Thread r2 = new Thread(()->{
+            op.SyncRead(d);
+        });
+        Thread w2 = new Thread(()->{
+            op.SyncWrite(d,45);
+        });
+        w2.start();
+        r2.start();
         r.start();
         w.start();
-
     }
 }
